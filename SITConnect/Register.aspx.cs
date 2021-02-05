@@ -200,8 +200,8 @@ namespace SITConnect
             }
             catch (Exception ex)
             {
-                // throw new Exception(ex.ToString());
-                errorOrSuccess.Text = ex.ToString();
+                
+                errorOrSuccess.Text = "There was an error";
             }
 
             finally { }
