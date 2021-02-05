@@ -1,5 +1,9 @@
 ﻿<%@ Page Title="Passowrd Change | SITConnect" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="ChangePassword.aspx.cs" Inherits="SITConnect.ChangePassword" %>
 <asp:Content ID="Content1" ContentPlaceHolderID="HeadPlaceHolder" runat="server">
+    <script src="https://www.google.com/recaptcha/api.js?render=6LcB7j8aAAAAAIpnGFum4SXTMqsTcRB0J3MtfHdh">
+
+
+    </script>
     <script type="text/javascript">
         function validate() {
             var str = document.getElementById('<%=newpass.ClientID%>').value;
@@ -69,6 +73,7 @@
                     ForeColor="Red" Display = "Dynamic" ErrorMessage = "Required" />
             </div>
             <asp:Button runat="server" CssClass="btn btn-primary btn-lg" Text="Change Password" OnClick="change_pwd_Click"/>
-        </div>        
+        </div>       
+        <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response"/>
     </div>
 </asp:Content>

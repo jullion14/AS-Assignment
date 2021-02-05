@@ -24,12 +24,12 @@ namespace SITConnect
         byte[] IV;
         protected void Page_Load(object sender, EventArgs e)
         {           
-            /*if (Session["LoggedIn"] == null || Session["AuthToken"] == null || Request.Cookies["AuthToken"] == null)
+            if (Session["LoggedIn"] == null || Session["AuthToken"] == null || Request.Cookies["AuthToken"] == null)
             {
                
                    Response.Redirect("Login.aspx", false);
                 
-            }*/
+            }
         }
         
         public bool EmailCheck(string email)
@@ -53,108 +53,111 @@ namespace SITConnect
 
         protected void change_pwd_Click(object sender, EventArgs e)
         {
-            bool exists = EmailCheck(emailAddr.Text);
-          
-            if (oldpass.Text.Trim() == newpass.Text.Trim())
+            if (ValidateCaptcha())
             {
-                errorOrSuccess.Text = "New password and old password must be different";
-                errorOrSuccess.ForeColor = Color.Red;
-                return;
-            }
-            else
-            {
-                if (!exists)
+                bool exists = EmailCheck(emailAddr.Text);
+
+                if (oldpass.Text.Trim() == newpass.Text.Trim())
                 {
-                    errorOrSuccess.Text = "Your email doesn't exist in the database";
+                    errorOrSuccess.Text = "New password and old password must be different";
                     errorOrSuccess.ForeColor = Color.Red;
                     return;
-
                 }
-                else if (exists)
+                else
                 {
-                    SHA512Managed hashing = new SHA512Managed();
-                    string dbHash = getDBHash(HttpUtility.HtmlEncode(emailAddr.Text.Trim()));
-                    string dbSalt = getDBSalt(HttpUtility.HtmlEncode(emailAddr.Text.Trim()));
-                    try
+                    if (!exists)
                     {
-                        if (dbSalt != null && dbSalt.Length > 0 && dbHash != null && dbHash.Length > 0)
+                        errorOrSuccess.Text = "Your email doesn't exist in the database";
+                        errorOrSuccess.ForeColor = Color.Red;
+                        return;
+
+                    }
+                    else if (exists)
+                    {
+                        SHA512Managed hashing = new SHA512Managed();
+                        string dbHash = getDBHash(HttpUtility.HtmlEncode(emailAddr.Text.Trim()));
+                        string dbSalt = getDBSalt(HttpUtility.HtmlEncode(emailAddr.Text.Trim()));
+                        try
                         {
-                            string pwdwithSalt = tb_oldpass.Text.ToString().Trim() + dbSalt;
-                            byte[] hashwithSalt = hashing.ComputeHash(Encoding.UTF8.GetBytes(pwdwithSalt));
-                            string userhash = Convert.ToBase64String(hashwithSalt);
-                            // if old password given is correct
-                            if (userhash.Equals(dbHash))
+                            if (dbSalt != null && dbSalt.Length > 0 && dbHash != null && dbHash.Length > 0)
                             {
-                                
-                                // Check for password complexity
-                                int scores = CheckPassword(tb_newpass.Text);
-                                string status = "";
-                                switch (scores)
+                                string pwdwithSalt = tb_oldpass.Text.ToString().Trim() + dbSalt;
+                                byte[] hashwithSalt = hashing.ComputeHash(Encoding.UTF8.GetBytes(pwdwithSalt));
+                                string userhash = Convert.ToBase64String(hashwithSalt);
+                                // if old password given is correct
+                                if (userhash.Equals(dbHash))
                                 {
-                                    case 1:
-                                        status = "Very Weak";
-                                        break;
-                                    case 2:
-                                        status = "Weak";
-                                        break;
-                                    case 3:
-                                        status = "Medium";
-                                        break;
-                                    case 4:
-                                        status = "Strong";
-                                        break;
-                                    case 5:
-                                        status = "Excellent";
-                                        break;
-                                    default:
-                                        break;
+
+                                    // Check for password complexity
+                                    int scores = CheckPassword(tb_newpass.Text);
+                                    string status = "";
+                                    switch (scores)
+                                    {
+                                        case 1:
+                                            status = "Very Weak";
+                                            break;
+                                        case 2:
+                                            status = "Weak";
+                                            break;
+                                        case 3:
+                                            status = "Medium";
+                                            break;
+                                        case 4:
+                                            status = "Strong";
+                                            break;
+                                        case 5:
+                                            status = "Excellent";
+                                            break;
+                                        default:
+                                            break;
+                                    }
+                                    errorOrSuccess.Text = " Password Status : " + status + ".";
+                                    if (scores < 4)
+                                    {
+                                        errorOrSuccess.ForeColor = Color.Red;
+                                        errorOrSuccess.Text += " Password does not match the required complexity.";
+                                        return;
+                                    }
+                                    errorOrSuccess.ForeColor = Color.Green;
+
+                                    // Update password logic starts here
+                                    // hashing/salting password
+
+
+                                    //Generate random "salt" 
+                                    RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
+                                    byte[] saltByte = new byte[8];
+
+                                    //Fills array of bytes with a cryptographically strong sequence of random values.
+                                    rng.GetBytes(saltByte);
+                                    salt = Convert.ToBase64String(saltByte);
+
+                                    string pwdWithSalt = tb_newpass.Text.ToString() + salt;
+                                    byte[] hashWithSalt = hashing.ComputeHash(Encoding.UTF8.GetBytes(pwdWithSalt));
+
+                                    finalHash = Convert.ToBase64String(hashWithSalt);
+
+
+                                    updateAccount(emailAddr.Text.ToString(), finalHash, salt);
+                                    errorOrSuccess.Text = "Password successfully updated";
+                                    errorOrSuccess.ForeColor = Color.Green;
                                 }
-                                errorOrSuccess.Text = " Password Status : " + status + ".";
-                                if (scores < 4)
+                                else
                                 {
-                                    errorOrSuccess.ForeColor = Color.Red;
-                                    errorOrSuccess.Text += " Password does not match the required complexity.";
-                                    return;
+                                    errorOrSuccess.Text = "Original password is wrong";
                                 }
-                                errorOrSuccess.ForeColor = Color.Green;
-
-                                // Update password logic starts here
-                                // hashing/salting password
-
-
-                                //Generate random "salt" 
-                                RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
-                                byte[] saltByte = new byte[8];
-
-                                //Fills array of bytes with a cryptographically strong sequence of random values.
-                                rng.GetBytes(saltByte);
-                                salt = Convert.ToBase64String(saltByte);
-
-                                string pwdWithSalt = tb_newpass.Text.ToString() + salt;
-                                byte[] hashWithSalt = hashing.ComputeHash(Encoding.UTF8.GetBytes(pwdWithSalt));
-
-                                finalHash = Convert.ToBase64String(hashWithSalt);
-
-                                
-                                updateAccount(emailAddr.Text.ToString(), finalHash, salt);
-                                errorOrSuccess.Text = "Password successfully updated";
-                                errorOrSuccess.ForeColor = Color.Green;
                             }
                             else
                             {
-                                errorOrSuccess.Text = "Original password is wrong";
+                                errorOrSuccess.Text = "An error has occured";
                             }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            errorOrSuccess.Text = "An error has occured";
+                            throw new Exception(ex.ToString());
                         }
+
                     }
-                    catch (Exception ex)
-                    {
-                        throw new Exception(ex.ToString());
-                    }
-                    
                 }
             }
         }
@@ -274,6 +277,33 @@ namespace SITConnect
                 score++;
             }
             return score;
+        }
+        public bool ValidateCaptcha()
+        {
+            bool result = true;
+            string captchaResponse = Request.Form["g-recaptcha-response"];
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://www.google.com/recaptcha/api/siteverify?secret=6LcB7j8aAAAAAHWlMJ4ILbSmsh7aiP6qoSwHWTJJ &response=" + captchaResponse);
+
+            try
+            {
+                using (WebResponse wResponse = req.GetResponse())
+                {
+                    using (StreamReader readStream = new StreamReader(wResponse.GetResponseStream()))
+                    {
+                        string jsonResponse = readStream.ReadToEnd();
+
+                        JavaScriptSerializer js = new JavaScriptSerializer();
+
+                        Login jsonObject = js.Deserialize<Login>(jsonResponse);
+                        result = Convert.ToBoolean(jsonObject.success);
+                    }
+                }
+                return result;
+            }
+            catch (WebException ex)
+            {
+                throw ex;
+            }
         }
     }
 }
